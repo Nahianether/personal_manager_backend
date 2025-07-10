@@ -17,12 +17,14 @@ pub struct Account {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "TEXT", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum AccountType {
     #[sqlx(rename = "wallet")]
     Wallet,
     #[sqlx(rename = "bank")]
     Bank,
     #[sqlx(rename = "mobile_banking")]
+    #[serde(alias = "mobileBanking")]
     MobileBanking,
     #[sqlx(rename = "cash")]
     Cash,
@@ -31,15 +33,19 @@ pub enum AccountType {
     #[sqlx(rename = "savings")]
     Savings,
     #[sqlx(rename = "credit_card")]
+    #[serde(alias = "creditCard")]
     CreditCard,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateAccountRequest {
+    pub id: Option<String>,
     pub name: String,
+    #[serde(alias = "type")]
     pub account_type: AccountType,
     pub balance: f64,
     pub currency: Option<String>,
+    #[serde(alias = "creditLimit")]
     pub credit_limit: Option<f64>,
 }
 
@@ -56,7 +62,7 @@ impl Account {
     pub fn new(request: CreateAccountRequest) -> Self {
         let now = Utc::now();
         Self {
-            id: Uuid::new_v4().to_string(),
+            id: request.id.unwrap_or_else(|| Uuid::new_v4().to_string()),
             name: request.name,
             account_type: request.account_type,
             balance: request.balance,

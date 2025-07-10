@@ -13,10 +13,15 @@ pub async fn create_transaction(
     State(pool): State<DbPool>,
     Json(request): Json<CreateTransactionRequest>,
 ) -> Result<Json<Value>, StatusCode> {
+    log::info!("📥 POST /transactions - Creating new transaction for account: {}", request.account_id);
+    log::debug!("Request payload: {:?}", request);
+    
     let transaction = Transaction::new(request);
     let transaction_type_str = format!("{:?}", transaction.transaction_type).to_lowercase();
     let date_str = transaction.date.format("%Y-%m-%d %H:%M:%S").to_string();
     let created_at_str = transaction.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
+    
+    log::debug!("Generated transaction ID: {}", transaction.id);
     
     let result = sqlx::query(
         "INSERT INTO transactions (id, account_id, transaction_type, amount, currency, category, description, date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -34,12 +39,17 @@ pub async fn create_transaction(
     .await;
 
     match result {
-        Ok(_) => Ok(Json(json!({
-            "success": true,
-            "data": transaction
-        }))),
+        Ok(_) => {
+            log::info!("✅ Transaction created successfully - ID: {}, Account: {}, Amount: {} {}", 
+                transaction.id, transaction.account_id, transaction.amount, transaction.currency);
+            Ok(Json(json!({
+                "success": true,
+                "data": transaction
+            })))
+        },
         Err(e) => {
-            log::error!("Failed to create transaction: {}", e);
+            log::error!("❌ Failed to create transaction for account '{}': {}", transaction.account_id, e);
+            log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -48,6 +58,7 @@ pub async fn create_transaction(
 pub async fn get_transactions(
     State(pool): State<DbPool>,
 ) -> Result<Json<Value>, StatusCode> {
+    log::info!("📥 GET /transactions - Fetching all transactions");
     let result = sqlx::query(
         "SELECT id, account_id, transaction_type, amount, currency, category, description, date, created_at FROM transactions ORDER BY date DESC"
     )
@@ -70,13 +81,15 @@ pub async fn get_transactions(
                 })
             }).collect();
             
+            log::info!("✅ Found {} transactions", transactions.len());
             Ok(Json(json!({
                 "success": true,
                 "data": transactions
             })))
         }
         Err(e) => {
-            log::error!("Failed to get transactions: {}", e);
+            log::error!("❌ Failed to get transactions: {}", e);
+            log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -86,6 +99,7 @@ pub async fn get_transaction(
     Path(id): Path<String>,
     State(pool): State<DbPool>,
 ) -> Result<Json<Value>, StatusCode> {
+    log::info!("📥 GET /transactions/{} - Fetching transaction by ID", id);
     let result = sqlx::query(
         "SELECT id, account_id, transaction_type, amount, currency, category, description, date, created_at FROM transactions WHERE id = ?"
     )
@@ -95,26 +109,34 @@ pub async fn get_transaction(
 
     match result {
         Ok(Some(row)) => {
+            let account_id = row.get::<String, _>("account_id");
+            let amount = row.get::<f64, _>("amount");
+            let currency = row.get::<String, _>("currency");
             let transaction = json!({
                 "id": row.get::<String, _>("id"),
-                "account_id": row.get::<String, _>("account_id"),
+                "account_id": account_id,
                 "transaction_type": row.get::<String, _>("transaction_type"),
-                "amount": row.get::<f64, _>("amount"),
-                "currency": row.get::<String, _>("currency"),
+                "amount": amount,
+                "currency": currency,
                 "category": row.get::<String, _>("category"),
                 "description": row.get::<Option<String>, _>("description"),
                 "date": row.get::<String, _>("date"),
                 "created_at": row.get::<String, _>("created_at")
             });
             
+            log::info!("✅ Found transaction: {} {} for account {}", amount, currency, account_id);
             Ok(Json(json!({
                 "success": true,
                 "data": transaction
             })))
         }
-        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Ok(None) => {
+            log::warn!("⚠️  Transaction not found with ID: {}", id);
+            Err(StatusCode::NOT_FOUND)
+        },
         Err(e) => {
-            log::error!("Failed to get transaction: {}", e);
+            log::error!("❌ Failed to get transaction {}: {}", id, e);
+            log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -125,6 +147,8 @@ pub async fn update_transaction(
     State(pool): State<DbPool>,
     Json(request): Json<UpdateTransactionRequest>,
 ) -> Result<Json<Value>, StatusCode> {
+    log::info!("📥 PUT /transactions/{} - Updating transaction", id);
+    log::debug!("Update request: {:?}", request);
     let transaction_type_str = request.transaction_type.map(|t| format!("{:?}", t).to_lowercase());
     let date_str = request.date.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string());
     
@@ -145,8 +169,10 @@ pub async fn update_transaction(
     match result {
         Ok(result) => {
             if result.rows_affected() == 0 {
+                log::warn!("⚠️  Transaction not found for update: {}", id);
                 Err(StatusCode::NOT_FOUND)
             } else {
+                log::info!("✅ Transaction updated successfully: {}", id);
                 Ok(Json(json!({
                     "success": true,
                     "message": "Transaction updated successfully"
@@ -154,7 +180,8 @@ pub async fn update_transaction(
             }
         }
         Err(e) => {
-            log::error!("Failed to update transaction: {}", e);
+            log::error!("❌ Failed to update transaction {}: {}", id, e);
+            log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -164,6 +191,7 @@ pub async fn delete_transaction(
     Path(id): Path<String>,
     State(pool): State<DbPool>,
 ) -> Result<Json<Value>, StatusCode> {
+    log::info!("📥 DELETE /transactions/{} - Deleting transaction", id);
     let result = sqlx::query("DELETE FROM transactions WHERE id = ?")
         .bind(&id)
         .execute(&pool)
@@ -172,8 +200,10 @@ pub async fn delete_transaction(
     match result {
         Ok(result) => {
             if result.rows_affected() == 0 {
+                log::warn!("⚠️  Transaction not found for deletion: {}", id);
                 Err(StatusCode::NOT_FOUND)
             } else {
+                log::info!("✅ Transaction deleted successfully: {}", id);
                 Ok(Json(json!({
                     "success": true,
                     "message": "Transaction deleted successfully"
@@ -181,7 +211,8 @@ pub async fn delete_transaction(
             }
         }
         Err(e) => {
-            log::error!("Failed to delete transaction: {}", e);
+            log::error!("❌ Failed to delete transaction {}: {}", id, e);
+            log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

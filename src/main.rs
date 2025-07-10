@@ -1,8 +1,10 @@
 use axum::{
     routing::{get, post, put, delete},
     Router,
+    http::{Method, HeaderValue},
 };
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer, Any};
+use tower_http::trace::TraceLayer;
 use std::net::SocketAddr;
 
 mod models;
@@ -21,7 +23,13 @@ use handlers::{
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    // Initialize logger with different levels
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .format_timestamp_secs()
+        .init();
+    
+    log::info!("🚀 Starting Personal Manager Backend Server...");
+    log::info!("📊 Log level: {}", log::max_level());
     
     // Initialize database
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:./personal_manager.db".to_string());
@@ -30,7 +38,29 @@ async fn main() {
     // Create tables
     services::database::create_tables(&pool).await.expect("Failed to create tables");
 
+    // Configure CORS for Flutter development
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_headers(Any);
+
     let app = Router::new()
+        // Root route
+        .route("/", get(|| async { 
+            serde_json::json!({
+                "message": "Personal Manager Backend API",
+                "version": "1.0.0",
+                "endpoints": {
+                    "accounts": "/accounts",
+                    "categories": "/categories", 
+                    "transactions": "/transactions",
+                    "liabilities": "/liabilities",
+                    "loans": "/loans",
+                    "health": "/health"
+                }
+            }).to_string()
+        }))
+        
         // Account routes
         .route("/accounts", post(create_account).get(get_accounts))
         .route("/accounts/:id", get(get_account).put(update_account).delete(delete_account))
@@ -54,11 +84,21 @@ async fn main() {
         // Health check
         .route("/health", get(|| async { "OK" }))
         
-        .layer(CorsLayer::permissive())
+        .layer(cors)
+        .layer(TraceLayer::new_for_http())
         .with_state(pool);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("Server running on http://{}", addr);
+    println!("🚀 Server starting...");
+    println!("📡 Server running on http://localhost:3000");
+    println!("📡 Server running on http://0.0.0.0:3000");
+    println!("📋 Available endpoints:");
+    println!("   GET  /              - API info");
+    println!("   GET  /health        - Health check");
+    println!("   GET  /accounts      - Get all accounts");
+    println!("   POST /accounts      - Create account");
+    println!("   🌐 CORS enabled for all origins");
+    println!("✅ Ready to accept connections!");
     
     hyper::Server::bind(&addr)
         .serve(app.into_make_service())

@@ -16,9 +16,9 @@ pub async fn create_account(
     Json(request): Json<CreateAccountRequest>,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 POST /accounts - Creating account for user {}", auth_user.user_id);
-    log::debug!("Create request: {:?}", request);
+    log::info!("✅ Successfully parsed request: {:?}", request);
     
-    let account = Account::new(request, auth_user.user_id.clone());
+    let account = Account::new(request.clone(), auth_user.user_id.clone());
     let account_type_str = format!("{:?}", account.account_type).to_lowercase();
     let created_at_str = account.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
     let updated_at_str = account.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
@@ -49,7 +49,16 @@ pub async fn create_account(
         Err(e) => {
             log::error!("❌ Failed to create account: {}", e);
             log::error!("Database error details: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            log::error!("Raw request data: {:?}", request);
+            
+            // Handle specific database errors
+            let error_msg = e.to_string();
+            if error_msg.contains("UNIQUE constraint failed: accounts.id") {
+                log::warn!("⚠️  Account with ID {} already exists", account.id);
+                Err(StatusCode::CONFLICT)
+            } else {
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }

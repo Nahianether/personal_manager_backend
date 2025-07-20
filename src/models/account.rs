@@ -43,7 +43,7 @@ pub enum AccountType {
     CreditCard,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CreateAccountRequest {
     pub id: Option<String>,
     pub name: String,
@@ -53,6 +53,11 @@ pub struct CreateAccountRequest {
     pub currency: Option<String>,
     #[serde(alias = "creditLimit")]
     pub credit_limit: Option<f64>,
+    // Accept but ignore these fields sent by Flutter
+    #[serde(alias = "createdAt")]
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(alias = "updatedAt")]
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]

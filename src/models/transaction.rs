@@ -33,8 +33,9 @@ pub enum TransactionType {
     Transfer,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CreateTransactionRequest {
+    pub id: Option<String>,
     #[serde(alias = "accountId")]
     pub account_id: String,
     #[serde(alias = "type")]
@@ -45,6 +46,9 @@ pub struct CreateTransactionRequest {
     pub description: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_datetime")]
     pub date: Option<DateTime<Utc>>,
+    // Accept but ignore these fields sent by Flutter
+    #[serde(alias = "createdAt")]
+    pub created_at: Option<DateTime<Utc>>,
 }
 
 fn deserialize_optional_datetime<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>

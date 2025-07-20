@@ -16,7 +16,7 @@ mod utils;
 use handlers::{
     account::{create_account, get_accounts, get_account, update_account, delete_account},
     // category::{create_category, get_categories, get_category, update_category, delete_category},
-    // transaction::{create_transaction, get_transactions, get_transaction, update_transaction, delete_transaction},
+    transaction::{create_transaction, get_transactions, get_transaction, update_transaction, delete_transaction},
     // liability::{create_liability, get_liabilities, get_liability, update_liability, delete_liability},
     // loan::{create_loan, get_loans, get_loan, update_loan, delete_loan},
     auth::{signup, login, signin},
@@ -93,8 +93,8 @@ async fn main() {
         .route("/accounts/:id", get(get_account).put(update_account).delete(delete_account))
         // .route("/categories", post(create_category).get(get_categories))
         // .route("/categories/:id", get(get_category).put(update_category).delete(delete_category))
-        // .route("/transactions", post(create_transaction).get(get_transactions))
-        // .route("/transactions/:id", get(get_transaction).put(update_transaction).delete(delete_transaction))
+        .route("/transactions", post(create_transaction).get(get_transactions))
+        .route("/transactions/:id", get(get_transaction).put(update_transaction).delete(delete_transaction))
         // .route("/liabilities", post(create_liability).get(get_liabilities))
         // .route("/liabilities/:id", get(get_liability).put(update_liability).delete(delete_liability))
         // .route("/loans", post(create_loan).get(get_loans))
@@ -116,6 +116,8 @@ async fn main() {
     println!("   GET  /health        - Health check");
     println!("   GET  /accounts      - Get all accounts");
     println!("   POST /accounts      - Create account");
+    println!("   GET  /transactions  - Get all transactions");
+    println!("   POST /transactions  - Create transaction");
     println!("   🌐 CORS enabled for all origins");
     println!("✅ Ready to accept connections!");
     

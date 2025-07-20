@@ -11,39 +11,13 @@ use crate::models::{Liability, CreateLiabilityRequest, UpdateLiabilityRequest};
 use crate::services::DbPool;
 
 pub async fn create_liability(
-    State(pool): State<DbPool>,
-    Json(request): Json<CreateLiabilityRequest>,
+    State(_pool): State<DbPool>,
+    Json(_request): Json<CreateLiabilityRequest>,
 ) -> Result<Json<Value>, StatusCode> {
-    let liability = Liability::new(request);
-    let due_date_str = liability.due_date.format("%Y-%m-%d %H:%M:%S").to_string();
-    let created_at_str = liability.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
-    let updated_at_str = liability.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
+    // TODO: Implement CRUD handlers with authentication
+    // This handler is temporarily disabled and needs to be updated to use authentication
     
-    let result = sqlx::query(
-        "INSERT INTO liabilities (id, person_name, amount, currency, due_date, is_paid, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(&liability.id)
-    .bind(&liability.person_name)
-    .bind(liability.amount)
-    .bind(&liability.currency)
-    .bind(&due_date_str)
-    .bind(liability.is_paid)
-    .bind(&liability.description)
-    .bind(&created_at_str)
-    .bind(&updated_at_str)
-    .execute(&pool)
-    .await;
-
-    match result {
-        Ok(_) => Ok(Json(json!({
-            "success": true,
-            "data": liability
-        }))),
-        Err(e) => {
-            log::error!("Failed to create liability: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    Err(StatusCode::NOT_IMPLEMENTED)
 }
 
 pub async fn get_liabilities(

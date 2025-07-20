@@ -6,14 +6,22 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Loan {
     pub id: String,
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    #[serde(rename = "personName")]
     pub person_name: String,
     pub amount: f64,
     pub currency: String,
+    #[serde(rename = "loanDate")]
     pub loan_date: DateTime<Utc>,
+    #[serde(rename = "returnDate")]
     pub return_date: Option<DateTime<Utc>>,
+    #[serde(rename = "isReturned")]
     pub is_returned: bool,
     pub description: Option<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -40,10 +48,11 @@ pub struct UpdateLoanRequest {
 }
 
 impl Loan {
-    pub fn new(request: CreateLoanRequest) -> Self {
+    pub fn new(request: CreateLoanRequest, user_id: String) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4().to_string(),
+            user_id,
             person_name: request.person_name,
             amount: request.amount,
             currency: request.currency.unwrap_or_else(|| "BDT".to_string()),

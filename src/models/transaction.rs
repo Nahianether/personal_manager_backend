@@ -6,13 +6,18 @@ use chrono::{DateTime, Utc, NaiveDateTime};
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Transaction {
     pub id: String,
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    #[serde(rename = "accountId")]
     pub account_id: String,
+    #[serde(rename = "type")]
     pub transaction_type: TransactionType,
     pub amount: f64,
     pub currency: String,
     pub category: Option<String>,
     pub description: Option<String>,
     pub date: DateTime<Utc>,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
 }
 
@@ -106,10 +111,11 @@ pub struct UpdateTransactionRequest {
 }
 
 impl Transaction {
-    pub fn new(request: CreateTransactionRequest) -> Self {
+    pub fn new(request: CreateTransactionRequest, user_id: String) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4().to_string(),
+            user_id,
             account_id: request.account_id,
             transaction_type: request.transaction_type,
             amount: request.amount,

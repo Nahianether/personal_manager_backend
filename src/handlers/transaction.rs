@@ -10,49 +10,13 @@ use crate::models::{Transaction, CreateTransactionRequest, UpdateTransactionRequ
 use crate::services::DbPool;
 
 pub async fn create_transaction(
-    State(pool): State<DbPool>,
-    Json(request): Json<CreateTransactionRequest>,
+    State(_pool): State<DbPool>,
+    Json(_request): Json<CreateTransactionRequest>,
 ) -> Result<Json<Value>, StatusCode> {
-    log::info!("📥 POST /transactions - Creating new transaction for account: {}", request.account_id);
-    log::debug!("Request payload: {:?}", request);
+    // TODO: Implement CRUD handlers with authentication
+    // This handler is temporarily disabled and needs to be updated to use authentication
     
-    let transaction = Transaction::new(request);
-    let transaction_type_str = format!("{:?}", transaction.transaction_type).to_lowercase();
-    let date_str = transaction.date.format("%Y-%m-%d %H:%M:%S").to_string();
-    let created_at_str = transaction.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
-    
-    log::debug!("Generated transaction ID: {}", transaction.id);
-    
-    let result = sqlx::query(
-        "INSERT INTO transactions (id, account_id, transaction_type, amount, currency, category, description, date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(&transaction.id)
-    .bind(&transaction.account_id)
-    .bind(&transaction_type_str)
-    .bind(transaction.amount)
-    .bind(&transaction.currency)
-    .bind(&transaction.category)
-    .bind(&transaction.description)
-    .bind(&date_str)
-    .bind(&created_at_str)
-    .execute(&pool)
-    .await;
-
-    match result {
-        Ok(_) => {
-            log::info!("✅ Transaction created successfully - ID: {}, Account: {}, Amount: {} {}", 
-                transaction.id, transaction.account_id, transaction.amount, transaction.currency);
-            Ok(Json(json!({
-                "success": true,
-                "data": transaction
-            })))
-        },
-        Err(e) => {
-            log::error!("❌ Failed to create transaction for account '{}': {}", transaction.account_id, e);
-            log::error!("Database error details: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    Err(StatusCode::NOT_IMPLEMENTED)
 }
 
 pub async fn get_transactions(

@@ -6,13 +6,20 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Liability {
     pub id: String,
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    #[serde(rename = "personName")]
     pub person_name: String,
     pub amount: f64,
     pub currency: String,
+    #[serde(rename = "dueDate")]
     pub due_date: DateTime<Utc>,
+    #[serde(rename = "isPaid")]
     pub is_paid: bool,
     pub description: Option<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -37,10 +44,11 @@ pub struct UpdateLiabilityRequest {
 }
 
 impl Liability {
-    pub fn new(request: CreateLiabilityRequest) -> Self {
+    pub fn new(request: CreateLiabilityRequest, user_id: String) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4().to_string(),
+            user_id,
             person_name: request.person_name,
             amount: request.amount,
             currency: request.currency.unwrap_or_else(|| "BDT".to_string()),

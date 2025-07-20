@@ -11,41 +11,13 @@ use crate::models::{Loan, CreateLoanRequest, UpdateLoanRequest};
 use crate::services::DbPool;
 
 pub async fn create_loan(
-    State(pool): State<DbPool>,
-    Json(request): Json<CreateLoanRequest>,
+    State(_pool): State<DbPool>,
+    Json(_request): Json<CreateLoanRequest>,
 ) -> Result<Json<Value>, StatusCode> {
-    let loan = Loan::new(request);
-    let loan_date_str = loan.loan_date.format("%Y-%m-%d %H:%M:%S").to_string();
-    let return_date_str = loan.return_date.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string());
-    let created_at_str = loan.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
-    let updated_at_str = loan.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
+    // TODO: Implement CRUD handlers with authentication
+    // This handler is temporarily disabled and needs to be updated to use authentication
     
-    let result = sqlx::query(
-        "INSERT INTO loans (id, person_name, amount, currency, loan_date, return_date, is_returned, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
-    .bind(&loan.id)
-    .bind(&loan.person_name)
-    .bind(loan.amount)
-    .bind(&loan.currency)
-    .bind(&loan_date_str)
-    .bind(return_date_str)
-    .bind(loan.is_returned)
-    .bind(&loan.description)
-    .bind(&created_at_str)
-    .bind(&updated_at_str)
-    .execute(&pool)
-    .await;
-
-    match result {
-        Ok(_) => Ok(Json(json!({
-            "success": true,
-            "data": loan
-        }))),
-        Err(e) => {
-            log::error!("Failed to create loan: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    Err(StatusCode::NOT_IMPLEMENTED)
 }
 
 pub async fn get_loans(

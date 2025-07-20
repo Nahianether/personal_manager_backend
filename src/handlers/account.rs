@@ -12,23 +12,22 @@ use crate::services::DbPool;
 
 pub async fn create_account(
     State(pool): State<DbPool>,
+    auth_user: crate::middleware::auth::AuthUser,
     Json(request): Json<CreateAccountRequest>,
 ) -> Result<Json<Value>, StatusCode> {
-    log::info!("📥 POST /accounts - Creating new account: {}", request.name);
-    log::debug!("Request payload: {:?}", request);
+    log::info!("📥 POST /accounts - Creating account for user {}", auth_user.user_id);
+    log::debug!("Create request: {:?}", request);
     
-    let account = Account::new(request);
+    let account = Account::new(request, auth_user.user_id.clone());
     let account_type_str = format!("{:?}", account.account_type).to_lowercase();
     let created_at_str = account.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
     let updated_at_str = account.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
     
-    log::debug!("Generated account ID: {}", account.id);
-    
-    // Use INSERT OR REPLACE to handle duplicate IDs
     let result = sqlx::query(
-        "INSERT OR REPLACE INTO accounts (id, name, account_type, balance, currency, credit_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO accounts (id, user_id, name, account_type, balance, currency, credit_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&account.id)
+    .bind(&account.user_id)
     .bind(&account.name)
     .bind(&account_type_str)
     .bind(account.balance)
@@ -41,14 +40,14 @@ pub async fn create_account(
 
     match result {
         Ok(_) => {
-            log::info!("✅ Account created/updated successfully - ID: {}, Name: {}", account.id, account.name);
+            log::info!("✅ Account created successfully: {} ({})", account.name, account.id);
             Ok(Json(json!({
                 "success": true,
                 "data": account
             })))
-        },
+        }
         Err(e) => {
-            log::error!("❌ Failed to create account '{}': {}", account.name, e);
+            log::error!("❌ Failed to create account: {}", e);
             log::error!("Database error details: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
@@ -57,12 +56,14 @@ pub async fn create_account(
 
 pub async fn get_accounts(
     State(pool): State<DbPool>,
+    auth_user: crate::middleware::auth::AuthUser,
 ) -> Result<Json<Value>, StatusCode> {
-    log::info!("📥 GET /accounts - Fetching all accounts");
+    log::info!("📥 GET /accounts - Fetching accounts for user {}", auth_user.user_id);
     
     let result = sqlx::query(
-        "SELECT id, name, account_type, balance, currency, credit_limit, created_at, updated_at FROM accounts ORDER BY created_at DESC"
+        "SELECT id, user_id, name, account_type, balance, currency, credit_limit, created_at, updated_at FROM accounts WHERE user_id = ? ORDER BY created_at DESC"
     )
+    .bind(&auth_user.user_id)
     .fetch_all(&pool)
     .await;
 
@@ -71,13 +72,14 @@ pub async fn get_accounts(
             let accounts: Vec<_> = rows.into_iter().map(|row| {
                 json!({
                     "id": row.get::<String, _>("id"),
+                    "userId": row.get::<String, _>("user_id"),
                     "name": row.get::<String, _>("name"),
-                    "account_type": row.get::<String, _>("account_type"),
+                    "type": row.get::<String, _>("account_type"),
                     "balance": row.get::<f64, _>("balance"),
                     "currency": row.get::<String, _>("currency"),
-                    "credit_limit": row.get::<Option<f64>, _>("credit_limit"),
-                    "created_at": row.get::<String, _>("created_at"),
-                    "updated_at": row.get::<String, _>("updated_at")
+                    "creditLimit": row.get::<Option<f64>, _>("credit_limit"),
+                    "createdAt": row.get::<String, _>("created_at"),
+                    "updatedAt": row.get::<String, _>("updated_at")
                 })
             }).collect();
             

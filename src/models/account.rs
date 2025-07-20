@@ -1,17 +1,23 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Account {
     pub id: String,
+    #[serde(rename = "userId")]
+    pub user_id: String,
     pub name: String,
+    #[serde(rename = "type")]
     pub account_type: AccountType,
     pub balance: f64,
     pub currency: String,
+    #[serde(rename = "creditLimit")]
     pub credit_limit: Option<f64>,
+    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -59,10 +65,11 @@ pub struct UpdateAccountRequest {
 }
 
 impl Account {
-    pub fn new(request: CreateAccountRequest) -> Self {
+    pub fn new(request: CreateAccountRequest, user_id: String) -> Self {
         let now = Utc::now();
         Self {
             id: request.id.unwrap_or_else(|| Uuid::new_v4().to_string()),
+            user_id,
             name: request.name,
             account_type: request.account_type,
             balance: request.balance,

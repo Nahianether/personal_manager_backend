@@ -6,3 +6,4 @@ pub mod loan;
 pub mod auth;
 pub mod user_data;
 pub mod preference;
+pub mod savings_goal;

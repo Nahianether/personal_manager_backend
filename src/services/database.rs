@@ -145,6 +145,30 @@ pub async fn create_tables(pool: &DbPool) -> Result<()> {
     .execute(pool)
     .await?;
 
+    // Create savings_goals table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS savings_goals (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            target_amount REAL NOT NULL,
+            current_amount REAL NOT NULL DEFAULT 0.0,
+            currency TEXT NOT NULL DEFAULT 'BDT',
+            target_date DATETIME NOT NULL,
+            description TEXT,
+            account_id TEXT,
+            priority TEXT NOT NULL DEFAULT 'medium',
+            is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // Migrations for existing databases: add new columns if they don't exist
     // .ok() ignores "duplicate column" errors for databases that already have these columns
     sqlx::query("ALTER TABLE loans ADD COLUMN is_historical_entry BOOLEAN NOT NULL DEFAULT FALSE").execute(pool).await.ok();

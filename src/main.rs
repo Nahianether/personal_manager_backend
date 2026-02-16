@@ -19,6 +19,7 @@ use handlers::{
     transaction::{create_transaction, get_transactions, get_transaction, update_transaction, delete_transaction},
     liability::{create_liability, get_liabilities, get_liability, update_liability, delete_liability},
     loan::{create_loan, get_loans, get_loan, update_loan, delete_loan},
+    savings_goal::{create_savings_goal, get_savings_goals, get_savings_goal, update_savings_goal, delete_savings_goal},
     auth::{signup, login, signin},
     user_data::{get_user_accounts, get_user_transactions, get_user_loans, get_user_liabilities},
     preference::{get_preferences, update_preferences},
@@ -100,6 +101,9 @@ async fn main() {
         // Loan routes (all require authentication)
         .route("/loans", post(create_loan).get(get_loans))
         .route("/loans/:id", get(get_loan).put(update_loan).delete(delete_loan))
+        // Savings goal routes (all require authentication)
+        .route("/savings-goals", post(create_savings_goal).get(get_savings_goals))
+        .route("/savings-goals/:id", get(get_savings_goal).put(update_savings_goal).delete(delete_savings_goal))
 
         // Preference routes (requires authentication)
         .route("/api/preferences", get(get_preferences).put(update_preferences))

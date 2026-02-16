@@ -9,20 +9,21 @@ use sqlx::Row;
 
 use crate::models::{Account, CreateAccountRequest, UpdateAccountRequest};
 use crate::services::DbPool;
+use crate::middleware::auth::AuthUser;
 
 pub async fn create_account(
     State(pool): State<DbPool>,
-    auth_user: crate::middleware::auth::AuthUser,
+    auth_user: AuthUser,
     Json(request): Json<CreateAccountRequest>,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 POST /accounts - Creating account for user {}", auth_user.user_id);
     log::info!("✅ Successfully parsed request: {:?}", request);
-    
+
     let account = Account::new(request.clone(), auth_user.user_id.clone());
     let account_type_str = format!("{:?}", account.account_type).to_lowercase();
     let created_at_str = account.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
     let updated_at_str = account.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
-    
+
     let result = sqlx::query(
         "INSERT INTO accounts (id, user_id, name, account_type, balance, currency, credit_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
@@ -50,8 +51,7 @@ pub async fn create_account(
             log::error!("❌ Failed to create account: {}", e);
             log::error!("Database error details: {:?}", e);
             log::error!("Raw request data: {:?}", request);
-            
-            // Handle specific database errors
+
             let error_msg = e.to_string();
             if error_msg.contains("UNIQUE constraint failed: accounts.id") {
                 log::warn!("⚠️  Account with ID {} already exists", account.id);
@@ -65,10 +65,10 @@ pub async fn create_account(
 
 pub async fn get_accounts(
     State(pool): State<DbPool>,
-    auth_user: crate::middleware::auth::AuthUser,
+    auth_user: AuthUser,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 GET /accounts - Fetching accounts for user {}", auth_user.user_id);
-    
+
     let result = sqlx::query(
         "SELECT id, user_id, name, account_type, balance, currency, credit_limit, created_at, updated_at FROM accounts WHERE user_id = ? ORDER BY created_at DESC"
     )
@@ -91,7 +91,7 @@ pub async fn get_accounts(
                     "updatedAt": row.get::<String, _>("updated_at")
                 })
             }).collect();
-            
+
             log::info!("✅ Found {} accounts", accounts.len());
             Ok(Json(json!({
                 "success": true,
@@ -109,13 +109,15 @@ pub async fn get_accounts(
 pub async fn get_account(
     Path(id): Path<String>,
     State(pool): State<DbPool>,
+    auth_user: AuthUser,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 GET /accounts/{} - Fetching account by ID", id);
-    
+
     let result = sqlx::query(
-        "SELECT id, name, account_type, balance, currency, credit_limit, created_at, updated_at FROM accounts WHERE id = ?"
+        "SELECT id, user_id, name, account_type, balance, currency, credit_limit, created_at, updated_at FROM accounts WHERE id = ? AND user_id = ?"
     )
     .bind(&id)
+    .bind(&auth_user.user_id)
     .fetch_optional(&pool)
     .await;
 
@@ -124,15 +126,16 @@ pub async fn get_account(
             let account_name = row.get::<String, _>("name");
             let account = json!({
                 "id": row.get::<String, _>("id"),
+                "userId": row.get::<String, _>("user_id"),
                 "name": account_name,
-                "account_type": row.get::<String, _>("account_type"),
+                "type": row.get::<String, _>("account_type"),
                 "balance": row.get::<f64, _>("balance"),
                 "currency": row.get::<String, _>("currency"),
-                "credit_limit": row.get::<Option<f64>, _>("credit_limit"),
-                "created_at": row.get::<String, _>("created_at"),
-                "updated_at": row.get::<String, _>("updated_at")
+                "creditLimit": row.get::<Option<f64>, _>("credit_limit"),
+                "createdAt": row.get::<String, _>("created_at"),
+                "updatedAt": row.get::<String, _>("updated_at")
             });
-            
+
             log::info!("✅ Found account: {}", account_name);
             Ok(Json(json!({
                 "success": true,
@@ -154,16 +157,17 @@ pub async fn get_account(
 pub async fn update_account(
     Path(id): Path<String>,
     State(pool): State<DbPool>,
+    auth_user: AuthUser,
     Json(request): Json<UpdateAccountRequest>,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 PUT /accounts/{} - Updating account", id);
     log::debug!("Update request: {:?}", request);
-    
+
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let account_type_str = request.account_type.map(|t| format!("{:?}", t).to_lowercase());
-    
+
     let result = sqlx::query(
-        "UPDATE accounts SET name = COALESCE(?, name), account_type = COALESCE(?, account_type), balance = COALESCE(?, balance), currency = COALESCE(?, currency), credit_limit = COALESCE(?, credit_limit), updated_at = ? WHERE id = ?"
+        "UPDATE accounts SET name = COALESCE(?, name), account_type = COALESCE(?, account_type), balance = COALESCE(?, balance), currency = COALESCE(?, currency), credit_limit = COALESCE(?, credit_limit), updated_at = ? WHERE id = ? AND user_id = ?"
     )
     .bind(request.name.as_ref())
     .bind(account_type_str)
@@ -172,6 +176,7 @@ pub async fn update_account(
     .bind(request.credit_limit)
     .bind(&now)
     .bind(&id)
+    .bind(&auth_user.user_id)
     .execute(&pool)
     .await;
 
@@ -199,11 +204,13 @@ pub async fn update_account(
 pub async fn delete_account(
     Path(id): Path<String>,
     State(pool): State<DbPool>,
+    auth_user: AuthUser,
 ) -> Result<Json<Value>, StatusCode> {
     log::info!("📥 DELETE /accounts/{} - Deleting account", id);
-    
-    let result = sqlx::query("DELETE FROM accounts WHERE id = ?")
+
+    let result = sqlx::query("DELETE FROM accounts WHERE id = ? AND user_id = ?")
         .bind(&id)
+        .bind(&auth_user.user_id)
         .execute(&pool)
         .await;
 

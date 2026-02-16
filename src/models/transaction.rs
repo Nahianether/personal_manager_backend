@@ -118,7 +118,7 @@ impl Transaction {
     pub fn new(request: CreateTransactionRequest, user_id: String) -> Self {
         let now = Utc::now();
         Self {
-            id: Uuid::new_v4().to_string(),
+            id: request.id.unwrap_or_else(|| Uuid::new_v4().to_string()),
             user_id,
             account_id: request.account_id,
             transaction_type: request.transaction_type,

@@ -21,6 +21,7 @@ use handlers::{
     loan::{create_loan, get_loans, get_loan, update_loan, delete_loan},
     auth::{signup, login, signin},
     user_data::{get_user_accounts, get_user_transactions, get_user_loans, get_user_liabilities},
+    preference::{get_preferences, update_preferences},
 };
 
 #[tokio::main]
@@ -99,6 +100,9 @@ async fn main() {
         // Loan routes (all require authentication)
         .route("/loans", post(create_loan).get(get_loans))
         .route("/loans/:id", get(get_loan).put(update_loan).delete(delete_loan))
+
+        // Preference routes (requires authentication)
+        .route("/api/preferences", get(get_preferences).put(update_preferences))
 
         // Health check
         .route("/health", get(|| async { "OK" }))

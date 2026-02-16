@@ -155,6 +155,20 @@ pub async fn create_tables(pool: &DbPool) -> Result<()> {
     sqlx::query("ALTER TABLE liabilities ADD COLUMN account_id TEXT").execute(pool).await.ok();
     sqlx::query("ALTER TABLE liabilities ADD COLUMN transaction_id TEXT").execute(pool).await.ok();
 
+    // Create user_preferences table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id TEXT PRIMARY KEY,
+            display_currency TEXT NOT NULL DEFAULT 'BDT',
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     log::info!("✅ All database tables created successfully");
     Ok(())
 }

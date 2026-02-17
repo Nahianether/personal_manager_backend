@@ -169,6 +169,53 @@ pub async fn create_tables(pool: &DbPool) -> Result<()> {
     .execute(pool)
     .await?;
 
+    // Create budgets table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS budgets (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'BDT',
+            period TEXT NOT NULL DEFAULT 'monthly',
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // Create recurring_transactions table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS recurring_transactions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            account_id TEXT NOT NULL,
+            transaction_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'BDT',
+            category TEXT,
+            description TEXT,
+            frequency TEXT NOT NULL DEFAULT 'monthly',
+            start_date DATETIME NOT NULL,
+            end_date DATETIME,
+            next_due_date DATETIME NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            savings_goal_id TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     // Migrations for existing databases: add new columns if they don't exist
     // .ok() ignores "duplicate column" errors for databases that already have these columns
     sqlx::query("ALTER TABLE loans ADD COLUMN is_historical_entry BOOLEAN NOT NULL DEFAULT FALSE").execute(pool).await.ok();
@@ -178,6 +225,9 @@ pub async fn create_tables(pool: &DbPool) -> Result<()> {
     sqlx::query("ALTER TABLE liabilities ADD COLUMN is_historical_entry BOOLEAN NOT NULL DEFAULT FALSE").execute(pool).await.ok();
     sqlx::query("ALTER TABLE liabilities ADD COLUMN account_id TEXT").execute(pool).await.ok();
     sqlx::query("ALTER TABLE liabilities ADD COLUMN transaction_id TEXT").execute(pool).await.ok();
+
+    sqlx::query("ALTER TABLE categories ADD COLUMN user_id TEXT NOT NULL DEFAULT ''").execute(pool).await.ok();
+    sqlx::query("ALTER TABLE categories ADD COLUMN updated_at DATETIME").execute(pool).await.ok();
 
     // Create user_preferences table
     sqlx::query(

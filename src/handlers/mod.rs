@@ -7,3 +7,5 @@ pub mod auth;
 pub mod user_data;
 pub mod preference;
 pub mod savings_goal;
+pub mod budget;
+pub mod recurring_transaction;

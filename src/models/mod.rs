@@ -6,6 +6,8 @@ pub mod loan;
 pub mod user;
 pub mod user_preference;
 pub mod savings_goal;
+pub mod budget;
+pub mod recurring_transaction;
 
 pub use account::*;
 pub use category::*;
@@ -15,3 +17,5 @@ pub use loan::*;
 pub use user::*;
 pub use user_preference::*;
 pub use savings_goal::*;
+pub use budget::*;
+pub use recurring_transaction::*;

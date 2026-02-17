@@ -20,8 +20,10 @@ use handlers::{
     liability::{create_liability, get_liabilities, get_liability, update_liability, delete_liability},
     loan::{create_loan, get_loans, get_loan, update_loan, delete_loan},
     savings_goal::{create_savings_goal, get_savings_goals, get_savings_goal, update_savings_goal, delete_savings_goal},
+    budget::{create_budget, get_budgets, get_budget, update_budget, delete_budget},
+    recurring_transaction::{create_recurring_transaction, get_recurring_transactions, get_recurring_transaction, update_recurring_transaction, delete_recurring_transaction},
     auth::{signup, login, signin},
-    user_data::{get_user_accounts, get_user_transactions, get_user_loans, get_user_liabilities},
+    user_data::{get_user_accounts, get_user_transactions, get_user_loans, get_user_liabilities, get_user_budgets, get_user_savings_goals, get_user_categories, get_user_recurring_transactions},
     preference::{get_preferences, update_preferences},
 };
 
@@ -88,6 +90,10 @@ async fn main() {
         .route("/api/transactions", get(get_user_transactions))
         .route("/api/loans", get(get_user_loans))
         .route("/api/liabilities", get(get_user_liabilities))
+        .route("/api/budgets", get(get_user_budgets))
+        .route("/api/savings_goals", get(get_user_savings_goals))
+        .route("/api/categories", get(get_user_categories))
+        .route("/api/recurring_transactions", get(get_user_recurring_transactions))
 
         // Account routes (all require authentication)
         .route("/accounts", post(create_account).get(get_accounts))
@@ -104,6 +110,12 @@ async fn main() {
         // Savings goal routes (all require authentication)
         .route("/savings-goals", post(create_savings_goal).get(get_savings_goals))
         .route("/savings-goals/:id", get(get_savings_goal).put(update_savings_goal).delete(delete_savings_goal))
+        // Budget routes (all require authentication)
+        .route("/budgets", post(create_budget).get(get_budgets))
+        .route("/budgets/:id", get(get_budget).put(update_budget).delete(delete_budget))
+        // Recurring transaction routes (all require authentication)
+        .route("/recurring_transactions", post(create_recurring_transaction).get(get_recurring_transactions))
+        .route("/recurring_transactions/:id", get(get_recurring_transaction).put(update_recurring_transaction).delete(delete_recurring_transaction))
 
         // Preference routes (requires authentication)
         .route("/api/preferences", get(get_preferences).put(update_preferences))
